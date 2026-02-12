@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Flores amarillas bajo la luna</title>
+  <title>Flores rojas bajo la luna</title>
   <style>
     html, body {
       margin: 0; height: 100%; overflow: hidden;
@@ -85,7 +85,10 @@
     ctx.fill();
 
     // brillo suave
-    const g2 = ctx.createRadialGradient(x - r*0.25, y - r*0.15, r*0.1, x - r*0.15, y - r*0.12, r*1.2);
+    const g2 = ctx.createRadialGradient(
+      x - r*0.25, y - r*0.15, r*0.1,
+      x - r*0.15, y - r*0.12, r*1.2
+    );
     g2.addColorStop(0, 'rgba(255,255,255,0.28)');
     g2.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g2;
@@ -104,7 +107,7 @@
     }
   }
 
-  // ---------- Flores amarillas que crecen ----------
+  // ---------- Flores rojas que crecen ----------
   const flowers = [];
   const maxFlowers = 26;
 
@@ -184,22 +187,33 @@
     const leafAlpha = 0.15 + 0.65 * f.grow;
     ctx.strokeStyle = `rgba(70, 190, 110, ${leafAlpha})`;
     ctx.lineWidth = 2 * DPR;
+
     ctx.beginPath();
     ctx.moveTo(f.x + sway * 0.15, f.baseY - f.stemH * 0.35 * f.grow);
-    ctx.quadraticCurveTo(f.x + 22*DPR, f.baseY - f.stemH * 0.32 * f.grow, f.x + 10*DPR, f.baseY - f.stemH * 0.26 * f.grow);
+    ctx.quadraticCurveTo(
+      f.x + 22*DPR,
+      f.baseY - f.stemH * 0.32 * f.grow,
+      f.x + 10*DPR,
+      f.baseY - f.stemH * 0.26 * f.grow
+    );
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(f.x + sway * 0.10, f.baseY - f.stemH * 0.52 * f.grow);
-    ctx.quadraticCurveTo(f.x - 26*DPR, f.baseY - f.stemH * 0.50 * f.grow, f.x - 12*DPR, f.baseY - f.stemH * 0.44 * f.grow);
+    ctx.quadraticCurveTo(
+      f.x - 26*DPR,
+      f.baseY - f.stemH * 0.50 * f.grow,
+      f.x - 12*DPR,
+      f.baseY - f.stemH * 0.44 * f.grow
+    );
     ctx.stroke();
 
-    // flor (pétalos amarillos)
+    // flor (pétalos rojos)
     const bloom = easeOutBack(f.grow);
     const R = f.size * bloom;
     const petals = f.petals;
 
-    const redBase = 0 + f.hueJitter; // amarillos cálidos (HSL)
+    const redBase = 0 + f.hueJitter; // rojos (HSL)
     for (let i = 0; i < petals; i++) {
       const a = (i / petals) * Math.PI * 2 + t * 0.0004;
       const px = x + Math.cos(a) * (R * 0.55);
@@ -212,10 +226,10 @@
       const petalW = R * 0.70;
       const petalH = R * 1.05;
 
-      const redBase = 0 + f.hueJitter; // rojos (HSL)
-      grad.addColorStop(0, `hsla(${redBase}, 95%, 72%, ${0.95})`);
-      grad.addColorStop(0.55, `hsla(${redBase}, 95%, 55%, ${0.92})`);
-      grad.addColorStop(1, `hsla(${redBase-10}, 95%, 45%, ${0.75})`);
+      const grad = ctx.createRadialGradient(0, -petalH*0.15, R*0.08, 0, 0, R*1.05);
+      grad.addColorStop(0, `hsla(${redBase}, 95%, 72%, 0.95)`);
+      grad.addColorStop(0.55, `hsla(${redBase}, 95%, 55%, 0.92)`);
+      grad.addColorStop(1, `hsla(${redBase-10}, 95%, 45%, 0.75)`);
 
       ctx.fillStyle = grad;
       roundPetal(ctx, 0, 0, petalW, petalH);
@@ -224,7 +238,10 @@
 
     // centro
     const centerR = R * 0.33;
-    const cg = ctx.createRadialGradient(x - centerR*0.2, stemTopY - centerR*0.2, centerR*0.1, x, stemTopY, centerR*1.1);
+    const cg = ctx.createRadialGradient(
+      x - centerR*0.2, stemTopY - centerR*0.2, centerR*0.1,
+      x, stemTopY, centerR*1.1
+    );
     cg.addColorStop(0, 'rgba(255, 210, 80, 0.95)');
     cg.addColorStop(0.6, 'rgba(180, 95, 20, 0.95)');
     cg.addColorStop(1, 'rgba(90, 40, 8, 0.95)');
@@ -273,7 +290,7 @@
     const n = 10;
     for (let i = 0; i < n; i++) {
       plant(rand(w*0.12, w*0.88), rand(h*0.70, h*0.95));
-      flowers[flowers.length-1].grow = Math.random() * 0.35; // ya un poquito nacidas
+      flowers[flowers.length-1].grow = Math.random() * 0.35;
     }
   }
   seedInitial();
