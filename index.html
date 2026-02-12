@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flores amarillas bajo la luna</title>
+  <style>
+    html, body {
+      margin: 0; height: 100%; overflow: hidden;
+      background: radial-gradient(1200px 700px at 50% 60%, #0b1637 0%, #050912 55%, #02030a 100%);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+
+    .hint {
+      position: fixed;
+      left: 14px; bottom: 12px;
+      color: rgba(255,255,255,.75);
+      font-size: 12px;
+      background: rgba(0,0,0,.18);
+      padding: 8px 10px;
+      border-radius: 12px;
+      backdrop-filter: blur(6px);
+      user-select: none;
+    }
+    .hint b { color: rgba(255,255,255,.9); }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hint"><b>Tip:</b> clic/tap para sembrar una flor ✨</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  function resize() {
+    canvas.width = Math.floor(innerWidth * DPR);
+    canvas.height = Math.floor(innerHeight * DPR);
+  }
+  addEventListener('resize', resize, { passive: true });
+  resize();
+
+  // ---------- Fondo: estrellas + luna ----------
+  let stars = [];
+  function makeStars() {
+    const count = Math.floor((innerWidth * innerHeight) / 9000);
+    stars = Array.from({ length: count }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: Math.random() * 1.4 + 0.2,
+      tw: Math.random() * Math.PI * 2,
+      sp: 0.6 + Math.random() * 1.4,
+      a: 0.25 + Math.random() * 0.75
+    }));
+  }
+  makeStars();
+  addEventListener('resize', makeStars, { passive: true });
+
+  function drawMoon(t) {
+    const w = canvas.width, h = canvas.height;
+    const x = w * 0.78, y = h * 0.22;
+    const r = Math.min(w, h) * 0.08;
+
+    // halo
+    const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.6);
+    g.addColorStop(0, 'rgba(255, 244, 214, 0.35)');
+    g.addColorStop(0.25, 'rgba(255, 244, 214, 0.18)');
+    g.addColorStop(1, 'rgba(255, 244, 214, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r * 2.6, 0, Math.PI * 2); ctx.fill();
+
+    // luna
+    const glow = 0.08 + 0.03 * Math.sin(t * 0.0012);
+    ctx.fillStyle = `rgba(255, 244, 214, ${0.95})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+    // “sombra” para efecto creciente
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(15, 24, 52, 0.95)`;
+    ctx.beginPath();
+    ctx.arc(x + r * (0.28 + glow), y - r * 0.02, r * 0.98, 0, Math.PI * 2);
+    ctx.fill();
+
+    // brillo suave
+    const g2 = ctx.createRadialGradient(x - r*0.25, y - r*0.15, r*0.1, x - r*0.15, y - r*0.12, r*1.2);
+    g2.addColorStop(0, 'rgba(255,255,255,0.28)');
+    g2.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawStars(t) {
+    const w = canvas.width, h = canvas.height;
+    for (const s of stars) {
+      const x = s.x * w, y = s.y * h;
+      const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(s.tw + t * 0.001 * s.sp));
+      ctx.fillStyle = `rgba(255,255,255,${s.a * tw})`;
+      ctx.beginPath();
+      ctx.arc(x, y, s.r * DPR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ---------- Flores amarillas que crecen ----------
+  const flowers = [];
+  const maxFlowers = 26;
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function plant(x, y) {
+    const w = canvas.width, h = canvas.height;
+    const fx = Math.max(40*DPR, Math.min(w - 40*DPR, x));
+    const fy = Math.max(h * 0.35, Math.min(h - 30*DPR, y));
+
+    const stemH = rand(70, 170) * DPR;
+    const size = rand(18, 36) * DPR;
+
+    flowers.push({
+      x: fx,
+      y: fy,
+      baseY: fy,
+      stemH,
+      size,
+      petals: Math.floor(rand(8, 12)),
+      grow: 0,
+      growSpeed: rand(0.006, 0.012),
+      swaySeed: rand(0, Math.PI * 2),
+      hueJitter: rand(-6, 6),
+      born: performance.now()
+    });
+
+    if (flowers.length > maxFlowers) flowers.shift();
+  }
+
+  // “Siembra” automática: van apareciendo poco a poco
+  let nextAuto = 0;
+  function autoPlant(t) {
+    if (t < nextAuto) return;
+    nextAuto = t + rand(450, 900); // cada 0.45 a 0.9s aprox
+
+    const w = canvas.width, h = canvas.height;
+    const x = rand(w * 0.08, w * 0.92);
+    const y = rand(h * 0.62, h * 0.95);
+    plant(x, y);
+  }
+
+  function drawGround() {
+    const w = canvas.width, h = canvas.height;
+    const g = ctx.createLinearGradient(0, h*0.55, 0, h);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.22, 'rgba(5, 12, 20, 0.25)');
+    g.addColorStop(0.55, 'rgba(5, 18, 22, 0.75)');
+    g.addColorStop(1, 'rgba(2, 10, 12, 1)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  function drawFlower(f, t) {
+    // crecimiento suave (0..1)
+    f.grow = Math.min(1, f.grow + f.growSpeed);
+
+    const sway = Math.sin(f.swaySeed + t * 0.0016) * (6 * DPR) * (0.15 + 0.85 * f.grow);
+    const x = f.x + sway;
+    const stemTopY = f.baseY - f.stemH * f.grow;
+
+    // tallo
+    ctx.lineCap = 'round';
+    ctx.lineWidth = (3.2 * DPR) * (0.5 + 0.5 * f.grow);
+    ctx.strokeStyle = 'rgba(80, 170, 95, 0.95)';
+    ctx.beginPath();
+    ctx.moveTo(f.x, f.baseY);
+    ctx.quadraticCurveTo(
+      f.x + sway * 0.35,
+      f.baseY - f.stemH * 0.55 * f.grow,
+      x,
+      stemTopY
+    );
+    ctx.stroke();
+
+    // hojitas
+    const leafAlpha = 0.15 + 0.65 * f.grow;
+    ctx.strokeStyle = `rgba(70, 190, 110, ${leafAlpha})`;
+    ctx.lineWidth = 2 * DPR;
+    ctx.beginPath();
+    ctx.moveTo(f.x + sway * 0.15, f.baseY - f.stemH * 0.35 * f.grow);
+    ctx.quadraticCurveTo(f.x + 22*DPR, f.baseY - f.stemH * 0.32 * f.grow, f.x + 10*DPR, f.baseY - f.stemH * 0.26 * f.grow);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(f.x + sway * 0.10, f.baseY - f.stemH * 0.52 * f.grow);
+    ctx.quadraticCurveTo(f.x - 26*DPR, f.baseY - f.stemH * 0.50 * f.grow, f.x - 12*DPR, f.baseY - f.stemH * 0.44 * f.grow);
+    ctx.stroke();
+
+    // flor (pétalos amarillos)
+    const bloom = easeOutBack(f.grow);
+    const R = f.size * bloom;
+    const petals = f.petals;
+
+    const yellowBase = 52 + f.hueJitter; // amarillos cálidos (HSL)
+    for (let i = 0; i < petals; i++) {
+      const a = (i / petals) * Math.PI * 2 + t * 0.0004;
+      const px = x + Math.cos(a) * (R * 0.55);
+      const py = stemTopY + Math.sin(a) * (R * 0.25);
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(a);
+
+      const petalW = R * 0.70;
+      const petalH = R * 1.05;
+
+      const grad = ctx.createRadialGradient(0, -petalH*0.15, R*0.08, 0, 0, R*1.05);
+      grad.addColorStop(0, `hsla(${yellowBase}, 95%, 72%, ${0.95})`);
+      grad.addColorStop(0.55, `hsla(${yellowBase}, 95%, 55%, ${0.92})`);
+      grad.addColorStop(1, `hsla(${yellowBase-8}, 95%, 45%, ${0.75})`);
+
+      ctx.fillStyle = grad;
+      roundPetal(ctx, 0, 0, petalW, petalH);
+      ctx.restore();
+    }
+
+    // centro
+    const centerR = R * 0.33;
+    const cg = ctx.createRadialGradient(x - centerR*0.2, stemTopY - centerR*0.2, centerR*0.1, x, stemTopY, centerR*1.1);
+    cg.addColorStop(0, 'rgba(255, 210, 80, 0.95)');
+    cg.addColorStop(0.6, 'rgba(180, 95, 20, 0.95)');
+    cg.addColorStop(1, 'rgba(90, 40, 8, 0.95)');
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(x, stemTopY, centerR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function roundPetal(ctx, x, y, w, h) {
+    // forma tipo gota (pétalo)
+    ctx.beginPath();
+    ctx.moveTo(x, y - h * 0.55);
+    ctx.bezierCurveTo(
+      x + w * 0.55, y - h * 0.55,
+      x + w * 0.55, y + h * 0.15,
+      x, y + h * 0.55
+    );
+    ctx.bezierCurveTo(
+      x - w * 0.55, y + h * 0.15,
+      x - w * 0.55, y - h * 0.55,
+      x, y - h * 0.55
+    );
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function easeOutBack(x) {
+    // suave y con “rebote” para el florecer
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  }
+
+  // Interacción: clic/tap para crear una flor donde toques
+  addEventListener('pointerdown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * DPR;
+    const y = (e.clientY - rect.top) * DPR;
+    plant(x, y);
+  }, { passive: true });
+
+  // Sembrar algunas al inicio
+  function seedInitial() {
+    const w = canvas.width, h = canvas.height;
+    const n = 10;
+    for (let i = 0; i < n; i++) {
+      plant(rand(w*0.12, w*0.88), rand(h*0.70, h*0.95));
+      flowers[flowers.length-1].grow = Math.random() * 0.35; // ya un poquito nacidas
+    }
+  }
+  seedInitial();
+
+  // Loop
+  function frame(t) {
+    const w = canvas.width, h = canvas.height;
+
+    // cielo base
+    ctx.fillStyle = '#02030a';
+    ctx.fillRect(0, 0, w, h);
+
+    drawStars(t);
+    drawMoon(t);
+    drawGround();
+
+    // auto flores
+    autoPlant(t);
+
+    // dibujar flores (orden por baseY para “profundidad”)
+    flowers.sort((a,b) => a.baseY - b.baseY);
+    for (const f of flowers) drawFlower(f, t);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
