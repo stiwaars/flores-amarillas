@@ -199,7 +199,7 @@
     const R = f.size * bloom;
     const petals = f.petals;
 
-    const yellowBase = 52 + f.hueJitter; // amarillos cálidos (HSL)
+    const redBase = 0 + f.hueJitter; // amarillos cálidos (HSL)
     for (let i = 0; i < petals; i++) {
       const a = (i / petals) * Math.PI * 2 + t * 0.0004;
       const px = x + Math.cos(a) * (R * 0.55);
@@ -212,10 +212,10 @@
       const petalW = R * 0.70;
       const petalH = R * 1.05;
 
-      const grad = ctx.createRadialGradient(0, -petalH*0.15, R*0.08, 0, 0, R*1.05);
-      grad.addColorStop(0, `hsla(${yellowBase}, 95%, 72%, ${0.95})`);
-      grad.addColorStop(0.55, `hsla(${yellowBase}, 95%, 55%, ${0.92})`);
-      grad.addColorStop(1, `hsla(${yellowBase-8}, 95%, 45%, ${0.75})`);
+      const redBase = 0 + f.hueJitter; // rojos (HSL)
+      grad.addColorStop(0, `hsla(${redBase}, 95%, 72%, ${0.95})`);
+      grad.addColorStop(0.55, `hsla(${redBase}, 95%, 55%, ${0.92})`);
+      grad.addColorStop(1, `hsla(${redBase-10}, 95%, 45%, ${0.75})`);
 
       ctx.fillStyle = grad;
       roundPetal(ctx, 0, 0, petalW, petalH);
